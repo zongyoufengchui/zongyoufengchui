@@ -1,1 +1,71 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+public class PaperCheck {
+    public static void main(String[] args) throws IOException {
+        String originalFile = "C:\\Users\\56866\\Desktop\\测试文本\\orig.txt";
+        String copiedFile = "C:\\Users\\56866\\Desktop\\测试文本\\orig_0.8_dis_15.txt";
+        String answerFile = "C:\\Users\\56866\\Desktop\\测试文本\\result5.txt";
+
+        String originalContent = readFile(originalFile);
+        String copiedContent = readFile(copiedFile);
+
+        double similarity = compareStrings(originalContent, copiedContent);
+
+        writeAnswer(answerFile, similarity);
+    }
+
+    private static String readFile(String file) throws IOException {
+        BufferedReader reader = new BufferedReader(new FileReader(file));
+        StringBuilder content = new StringBuilder();
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            content.append(line).append("\n");
+        }
+
+        reader.close();
+        return content.toString();
+    }
+
+    private static double compareStrings(String original, String copied) {
+        if (original == null || copied == null) {
+            return 0;
+        }
+
+        Map<String, Integer> wordCount = new HashMap<>();
+
+        for (String word : original.split(" ")) {
+            wordCount.put(word, wordCount.getOrDefault(word, 0) + 1);
+        }
+
+        int commonWords = 0;
+
+        for (String word : copied.split(" ")) {
+            if (wordCount.containsKey(word)) {
+                wordCount.put(word, wordCount.get(word) - 1);
+                if (wordCount.get(word) == 0) {
+                    wordCount.remove(word);
+                }
+                commonWords++;
+            }
+        }
+
+        return (double) commonWords / original.split(" ").length;
+    }
+
+    private static void writeAnswer(String file, double similarity) throws IOException {
+        if (similarity < 0 || similarity > 1) {
+            throw new IllegalArgumentException("相似率应该在0~1之间");
+        }
+
+        FileWriter writer = new FileWriter(file);
+        writer.write(String.format("%.2f", similarity));
+        writer.close();
+    }
+}
 
