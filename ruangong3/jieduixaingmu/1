@@ -1,0 +1,178 @@
+import java.io.*;
+import java.util.*;
+
+public class MathExerciseGenerator {
+    private static final String OPERATORS = "+-*/"; // 可用的运算符
+    private static final int MAX_OPERATORS = 3; // 运算符个数上限
+
+    private static int exerciseCount;
+    private static int range;
+
+    public static void main(String[] args) {
+        if (args.length < 2) {
+            System.out.println("参数不正确，请按照以下格式输入：");
+            System.out.println("Myapp.exe -n 题目个数 -r 数值范围");
+            return;
+        }
+
+        try {
+            parseArguments(args);
+            generateExercises();
+            System.out.println("题目生成完毕！");
+        } catch (Exception e) {
+            System.out.println("发生错误：" + e.getMessage());
+        }
+    }
+
+private static void parseArguments(String[] args) throws IllegalArgumentException {
+    for (int i = 0; i < args.length; i++) {
+        if (args[i].equals("-n")) {
+            try {
+                exerciseCount = Integer.parseInt(args[i + 1]);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("题目个数必须为正整数！");
+            }
+        } else if (args[i].equals("-r")) {
+            try {
+                range = Integer.parseInt(args[i + 1]);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("数值范围必须为正整数！");
+            }
+        }
+    }
+
+    if (exerciseCount <= 0 || range <= 0) {
+        throw new IllegalArgumentException("题目个数和数值范围必须为正整数！");
+    }
+}
+
+private static void generateExercises() throws IOException {
+    List<String> exercises = new ArrayList<>();
+    List<String> answers = new ArrayList<>();
+    Random random = new Random();
+
+    while (exercises.size() < exerciseCount) {
+        String expression = generateExpression(random);
+        if (expressionIsValid(expression) && !exercises.contains(expression)) {
+            exercises.add(expression);
+            answers.add(calculateAnswer(expression));
+        }
+    }
+
+    writeToFile("Exercises.txt", exercises);
+    writeToFile("Answers.txt", answers);
+}
+
+private static String generateExpression(Random random) {
+    StringBuilder sb = new StringBuilder();
+
+    int operatorCount = random.nextInt(MAX_OPERATORS) + 1; // 随机生成运算符个数
+    int numberCount = operatorCount + 1; // 数字个数等于运算符个数加1
+
+    for (int i = 0; i < numberCount; i++) {
+        if (i > 0) {
+            sb.append(getRandomOperator(random)); // 在数字之间插入运算符
+        }
+        sb.append(generateNumber(random)); // 生成随机数
+    }
+
+    return sb.toString();
+}
+
+private static String generateNumber(Random random) {
+    int number = random.nextInt(range) + 1; // 生成一个范围内的随机数
+    return String.valueOf(number);
+}
+
+private static char getRandomOperator(Random random) {
+    char[] operators = {'+', '-', '*', '/'}; // 可用的运算符数组
+    int index = random.nextInt(operators.length); // 生成一个随机索引
+    return operators[index];
+}
+
+private static boolean expressionIsValid(String expression) {
+    // 表达式不允许以运算符开头或结尾
+    if (isOperator(expression.charAt(0)) || isOperator(expression.charAt(expression.length() - 1))) {
+        return false;
+    }
+
+    // 表达式中不允许连续出现两个运算符
+    for (int i = 1; i < expression.length(); i++) {
+        if (isOperator(expression.charAt(i)) && isOperator(expression.charAt(i - 1))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+private static boolean isOperator(char ch) {
+    return ch == '+' || ch == '-' || ch == '*' || ch == '/';
+}
+
+private static String calculateAnswer(String expression) {
+    Stack<Integer> numberStack = new Stack<>();
+    Stack<Character> operatorStack = new Stack<>();
+
+    for (int i = 0; i < expression.length(); i++) {
+        char ch = expression.charAt(i);
+        if (Character.isDigit(ch)) {
+            int number = ch - '0';
+            while (i + 1 < expression.length() && Character.isDigit(expression.charAt(i + 1))) {
+                number = number * 10 + (expression.charAt(i + 1) - '0');
+                i++;
+            }
+            numberStack.push(number);
+        } else if (isOperator(ch)) {
+            while (!operatorStack.isEmpty() && hasHigherPrecedence(operatorStack.peek(), ch)) {
+                int operand2 = numberStack.pop();
+                int operand1 = numberStack.pop();
+                char operator = operatorStack.pop();
+                int result = performOperation(operand1, operand2, operator);
+                numberStack.push(result);
+            }
+            operatorStack.push(ch);
+        }
+    }
+
+    while (!operatorStack.isEmpty()) {
+        int operand2 = numberStack.pop();
+        int operand1 = numberStack.pop();
+        char operator = operatorStack.pop();
+        int result = performOperation(operand1, operand2, operator);
+        numberStack.push(result);
+    }
+
+    return String.valueOf(numberStack.peek());
+}
+
+private static boolean hasHigherPrecedence(char operator1, char operator2) {
+        return (operator1 == '*' || operator1 == '/') && (operator2 == '+' || operator2 == '-');
+    }
+
+    private static int performOperation(int operand1, int operand2, char operator) {
+        switch (operator) {
+            case '+':
+                return operand1 + operand2;
+            case '-':
+                return operand1 - operand2;
+            case '*':
+                return operand1 * operand2;
+            case '/':
+                return operand1 / operand2;
+            default:
+                throw new IllegalArgumentException("不支持的运算符: " + operator);
+        }
+    }
+
+    private static void writeToFile(String filePath, List<String> lines) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            for (String line : lines) {
+                writer.write(line);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            throw new IOException("无法写入文件: " + filePath, e);
+        }
+    }
+}
