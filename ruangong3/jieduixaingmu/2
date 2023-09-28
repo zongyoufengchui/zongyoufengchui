@@ -1,0 +1,233 @@
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.*;
+
+public class MathExerciseGenerator {
+    private static final int MAX_OPERATORS = 3;
+    private static final String[] OPERATORS = {"+", "-", "*", "/"};
+    private static final Random RANDOM = new Random();
+
+    public static void main(String[] args) {
+        if (args.length == 2 && args[0].equals("-n") && isInteger(args[1])) {
+            int exerciseCount = Integer.parseInt(args[1]);
+            generateExercises(exerciseCount);
+        } else if (args.length == 2 && args[0].equals("-r") && isInteger(args[1])) {
+            int range = Integer.parseInt(args[1]);
+            generateExercisesWithRange(range);
+        } else if (args.length == 4 && args[0].equals("-e") && args[2].equals("-a")) {
+            String exerciseFile = args[1];
+            String answerFile = args[3];
+            checkAnswers(exerciseFile, answerFile);
+        } else {
+            showHelpMessage();
+        }
+    }
+
+private static void generateExercises(int exerciseCount) {
+        List<String> exercises = new ArrayList<>();
+        List<String> answers = new ArrayList<>();
+
+        while (exercises.size() < exerciseCount) {
+            String expression = generateExpression();
+            String answer = calculateAnswer(expression);
+
+            if (!exercises.contains(expression) && isValidExercise(expression, answer)) {
+                exercises.add(expression);
+                answers.add(answer);
+            }
+        }
+
+        writeToFile("Exercises.txt", exercises);
+        writeToFile("Answers.txt", answers);
+    }
+
+    private static void generateExercisesWithRange(int range) {
+        if (range < 1) {
+            System.out.println("范围参数必须为正整数。");
+            return;
+        }
+
+        int exerciseCount = 10000;
+        List<String> exercises = new ArrayList<>();
+        List<String> answers = new ArrayList<>();
+
+        while (exercises.size() < exerciseCount) {
+            String expression = generateExpression(range);
+            String answer = calculateAnswer(expression);
+
+            if (!exercises.contains(expression) && isValidExercise(expression, answer)) {
+                exercises.add(expression);
+                answers.add(answer);
+            }
+        }
+
+        writeToFile("Exercises.txt", exercises);
+        writeToFile("Answers.txt", answers);
+    }
+
+private static void checkAnswers(String exerciseFile, String answerFile) {
+        List<String> exerciseLines = readLinesFromFile(exerciseFile);
+        List<String> answerLines = readLinesFromFile(answerFile);
+
+        if (exerciseLines.isEmpty() || answerLines.isEmpty() || exerciseLines.size() != answerLines.size()) {
+            System.out.println("题目文件或答案文件格式不正确。");
+            return;
+        }
+
+        int exerciseCount = exerciseLines.size();
+        int correctCount = 0;
+        List<Integer> correctIndices = new ArrayList<>();
+        List<Integer> wrongIndices = new ArrayList<>();
+
+        for (int i = 0; i < exerciseCount; i++) {
+            String exercise = exerciseLines.get(i);
+            String answer = answerLines.get(i);
+            String calculatedAnswer = calculateAnswer(exercise);
+
+            if (answer.equals(calculatedAnswer)) {
+                correctCount++;
+                correctIndices.add(i + 1);
+            } else {
+                wrongIndices.add(i + 1);
+            }
+        }
+
+        List<String> resultLines = new ArrayList<>();
+        resultLines.add("Correct: " + correctCount + " (" + joinIndices(correctIndices) + ")");
+        resultLines.add("Wrong: " + (exerciseCount - correctCount) + " (" + joinIndices(wrongIndices) + ")");
+        writeToFile("Grade.txt", resultLines);
+    }
+
+private static String generateExpression() {
+        int operatorCount = RANDOM.nextInt(MAX_OPERATORS) + 1;
+        int operandCount = operatorCount + 1;
+
+        StringBuilder expression = new StringBuilder();
+        int remainingOperands = operandCount;
+
+        for (int i = 0; i < operatorCount; i++) {
+            int operandsToUse = Math.min(2, remainingOperands);
+            int operatorIndex = RANDOM.nextInt(operandsToUse);
+            int operand = RANDOM.nextInt(9) + 1; // 生成1-9之间的随机数
+
+            expression.append(operand);
+
+            if (i < operatorCount - 1) {
+                expression.append(getRandomOperator());
+            }
+
+            remainingOperands--;
+        }
+
+        expression.append(RANDOM.nextInt(9) + 1); // 生成1-9之间的随机数
+
+        return expression.toString();
+    }
+
+    private static String generateExpression(int range) {
+        int operatorCount = RANDOM.nextInt(MAX_OPERATORS) + 1;
+        int operandCount = operatorCount + 1;
+
+        StringBuilder expression = new StringBuilder();
+
+int remainingOperands = operandCount;
+
+        for (int i = 0; i < operatorCount; i++) {
+            int operandsToUse = Math.min(2, remainingOperands);
+            int operatorIndex = RANDOM.nextInt(operandsToUse);
+            int operand = RANDOM.nextInt(range - 1) + 1; // 生成1到range-1之间的随机数
+
+            expression.append(operand);
+
+            if (i < operatorCount - 1) {
+                expression.append(getRandomOperator());
+            }
+
+            remainingOperands--;
+        }
+
+        expression.append(RANDOM.nextInt(range - 1) + 1); // 生成1到range-1之间的随机数
+
+        return expression.toString();
+    }
+
+    private static String calculateAnswer(String expression) {
+        return new ScriptEngineManager().getEngineByName("JavaScript").eval(expression).toString();
+    }
+
+    private static String getRandomOperator() {
+        int index = RANDOM.nextInt(OPERATORS.length);
+        return OPERATORS[index];
+    }
+
+    private static boolean isValidExercise(String expression, String answer) {
+        if (expression.contains("/") && !answer.contains("'")) {
+            // 包含除法且答案不是带分数形式
+            return false;
+        }
+
+        if (expression.contains("-") && !answer.contains("-")) {
+            // 包含减法但答案为正数
+            return false;
+        }
+
+        return true;
+    }
+
+private static void writeToFile(String fileName, List<String> lines) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileName))) {
+            for (String line : lines) {
+                writer.write(line);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static List<String> readLinesFromFile(String fileName) {
+        List<String> lines = new ArrayList<>();
+
+        try (Scanner scanner = new Scanner(new File(fileName))) {
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                lines.add(line);
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return lines;
+    }
+
+    private static String joinIndices(List<Integer> indices) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < indices.size(); i++) {
+            sb.append(indices.get(i));
+
+            if (i < indices.size() - 1) {
+                sb.append(", ");
+            }
+        }
+
+        return sb.toString();
+    }
+
+private static boolean isInteger(String s) {
+        try {
+            Integer.parseInt(s);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private static void showHelpMessage() {
+        System.out.println("使用方法:");
+        System.out.println("生成题目: Myapp.exe -n <题目数量>");
+        System.out.println("生成题目（指定范围）: Myapp.exe -r <范围>");
+        System.out.println("检查答案: Myapp.exe -e <题目文件> -a <答案文件>");
+    }
+}
